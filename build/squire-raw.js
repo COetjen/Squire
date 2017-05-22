@@ -2476,6 +2476,10 @@ function Squire ( root, config ) {
     if ( root.nodeType === DOCUMENT_NODE ) {
         root = root.body;
     }
+    
+    var topParent = root;
+    while (topParent.parentNode) topParent = topParent.parentNode; 
+    //if ( topParent.nodeType === DOCUMENT_FRAGMENT_NODE ) {}
     var doc = root.ownerDocument;
     var win = doc.defaultView;
     var mutation;
@@ -2483,6 +2487,7 @@ function Squire ( root, config ) {
     this._win = win;
     this._doc = doc;
     this._root = root;
+    this._topParent = topParent;
 
     this._events = {};
 
@@ -2673,7 +2678,7 @@ proto.modifyDocument = function ( modificationCallback ) {
     if ( mutation ) {
         if ( mutation.takeRecords().length ) {
             this._docWasChanged();
-        }
+    }
         mutation.disconnect();
     }
 
@@ -2709,7 +2714,11 @@ proto.fireEvent = function ( type, event ) {
     // focus event to fire after the blur event, which can cause an infinite
     // loop. So we detect whether we're actually focused/blurred before firing.
     if ( /^(?:focus|blur)/.test( type ) ) {
-        isFocused = isOrContains( this._root, this._doc.activeElement );
+        if ( this._topParent.nodeType === DOCUMENT_FRAGMENT_NODE ) {
+        	isFocused = isOrContains( this._root, this._topParent.activeElement );
+        } else {
+        	isFocused = isOrContains( this._root, this._doc.activeElement );
+        }
         if ( type === 'focus' ) {
             if ( !isFocused || this._isFocused ) {
                 return this;
@@ -2875,7 +2884,11 @@ proto.moveCursorToEnd = function () {
 };
 
 var getWindowSelection = function ( self ) {
-    return self._win.getSelection() || null;
+    if ( self._topParent.nodeType === DOCUMENT_FRAGMENT_NODE ) {
+    	return self._topParent.getSelection() || null;
+    } else {
+    	return self._win.getSelection() || null;
+    }
 };
 
 proto.setSelection = function ( range ) {
@@ -3946,14 +3959,14 @@ var decreaseListLevel = function ( frag ) {
                 newParent.removeChild( parent );
             }
         } else {
-            while ( node ) {
-                next = node.nextSibling;
-                if ( isContainer( node ) ) {
-                    break;
-                }
-                newParent.insertBefore( node, parent );
-                node = next;
+        while ( node ) {
+            next = node.nextSibling;
+            if ( isContainer( node ) ) {
+                break;
             }
+            newParent.insertBefore( node, parent );
+            node = next;
+        }
         }
         if ( newParent.nodeName === 'LI' && first.previousSibling ) {
             split( newParent, first, newParent.parentNode, root );
@@ -4042,9 +4055,9 @@ proto.setHTML = function ( html ) {
         frag = sanitizeToDOMFragment( html, false, this );
     } else {
         div = this.createElement( 'DIV' );
-        div.innerHTML = html;
+    div.innerHTML = html;
         frag = this._doc.createDocumentFragment();
-        frag.appendChild( empty( div ) );
+    frag.appendChild( empty( div ) );
     }
 
     cleanTree( frag );
@@ -4436,7 +4449,7 @@ proto.setTextAlignment = function ( alignment ) {
             .join( ' ' );
         if ( alignment ) {
             block.className = className + ' align-' + alignment;
-            block.style.textAlign = alignment;
+        block.style.textAlign = alignment;
         } else {
             block.className = className;
             block.style.textAlign = '';
@@ -4448,7 +4461,7 @@ proto.setTextAlignment = function ( alignment ) {
 proto.setTextDirection = function ( direction ) {
     this.forEachBlock( function ( block ) {
         if ( direction ) {
-            block.dir = direction;
+        block.dir = direction;
         } else {
             block.removeAttribute( 'dir' );
         }
