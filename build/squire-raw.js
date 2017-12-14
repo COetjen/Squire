@@ -3520,6 +3520,10 @@ proto._addFormat = function ( tag, attributes, range ) {
             node = walker.currentNode;
             needsFormat = !getNearest( node, root, tag, attributes );
             if ( needsFormat ) {
+                var parent = node.parentNode;
+                if (parent && parent.localName && parent.localName === 'a') {
+                  node = parent;
+                }
                 // <br> can never be a container node, so must have a text node
                 // if node == (end|start)Container
                 if ( node === endContainer && node.length > endOffset ) {
